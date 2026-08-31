@@ -1,15 +1,35 @@
 : 1
 name: spirv-cross
-version: 0.1.0-a.0.z
+version: 1.4.357-a.0.z
+upstream-version: vulkan-sdk-1.4.357.0
 language: c++
-project: build2-SPIRV-Cross
-summary: spirv-cross C++ executable
-license: other: proprietary ; Not free/open source.
+project: spirv-cross
+summary: SPIR-V to GLSL/HLSL/MSL/C++ command line cross-compiler
+topics: graphics, Vulkan, SPIR-V, shader, cross-compiler
+license: Apache-2.0 AND MIT ; Apache-2.0 OR MIT for most files. MIT-only for spirv.h, spirv.hpp, and GLSL.std.450.h. Apache-2.0-only for include/spirv_cross/ runtime headers.
 description-file: README.md
 package-description-file: PACKAGE-README.md
-url: https://example.org/upstream
-email: upstream@example.org
-package-url: https://github.com/build2-packaging/build2-SPIRV-Cross
+url: https://github.com/KhronosGroup/SPIRV-Cross
+src-url: https://github.com/KhronosGroup/SPIRV-Cross
+doc-url: https://github.com/KhronosGroup/SPIRV-Cross/wiki
+package-url: https://github.com/build2-packaging/SPIRV-Cross
 package-email: packaging@build2.org ; Mailing list.
 depends: * build2 >= 0.18.0
 depends: * bpkg >= 0.18.0
+depends:
+\
+libspirv-cross == $
+{
+  require
+  {
+    config.libspirv_cross.glsl = true
+    config.libspirv_cross.hlsl = true
+    config.libspirv_cross.msl = true
+    config.libspirv_cross.cpp = true
+    config.libspirv_cross.reflect = true
+    config.libspirv_cross.util = true
+  }
+}
+\
+build-exclude: *-msvc_14** ; c.predefs requires Visual Studio 2019 or later.
+build-exclude: *-msvc_15** ; c.predefs requires Visual Studio 2019 or later.
