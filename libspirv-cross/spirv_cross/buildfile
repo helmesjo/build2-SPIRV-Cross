@@ -1,41 +1,289 @@
+# Mirrors upstream's CMakeLists.txt target graph: one library per
+# spirv_cross_add_library() call. C++ components are liba{} (upstream
+# documents the C++ API as not ABI-stable). The C API is lib{} (both).
+# Sources are flat, matching upstream's own repo root.
+
 intf_libs = # Interface dependencies.
 impl_libs = # Implementation dependencies.
-#import xxxx_libs += libhello%lib{hello}
 
-lib{spirv-cross}: {hxx ixx txx cxx}{**} $impl_libs $intf_libs
+spirvcross_ns_poptions =
+if ($config.libspirv_cross.namespace != '')
+  spirvcross_ns_poptions = "-DSPIRV_CROSS_NAMESPACE_OVERRIDE=$config.libspirv_cross.namespace"
+
+# Dual inclusion: qualified (-I package root) and unqualified
+# (-I spirv_cross/, matching upstream pkg-config and MoltenVK).
+#
+out_pfx_unq = [dir_path] $out_root/spirv_cross/
+src_pfx_unq = [dir_path] $src_root/spirv_cross/
+
+spirvcross_export_poptions = "-I$out_root" "-I$src_root" "-I$out_pfx_unq" "-I$src_pfx_unq"
 
 # Build options.
 #
-cxx.poptions =+ "-I$out_root" "-I$src_root"
+cxx.poptions =+ $spirvcross_export_poptions $spirvcross_ns_poptions
 
-#obja{*}: cxx.poptions += -DSPIRV_CROSS_STATIC_BUILD
-#objs{*}: cxx.poptions += -DSPIRV_CROSS_SHARED_BUILD
-
-# Export options.
+# Hidden visibility on every object in this directory so that linking
+# backend libus{} into libs{spirv-cross-c} does not export the C++ API.
+# SPVC_EXPORT_SYMBOLS (shared-only, below) re-exports the C entry points.
 #
-lib{spirv-cross}:
+if ($cxx.class != 'msvc')
+  cxx.coptions =+ -fvisibility=hidden
+
+macos = ($cxx.target.class == 'macos')
+bsd   = ($cxx.target.class == 'bsd')
+
+# libul{} so libs{spirv-cross-c} can link PIC libus{} objects. The same
+# cxx{} cannot be a source of both liba{backend} and libs{spirv-cross-c}:
+# obj{} would see lib{spirv-cross-c}'s -D flags on only one member.
+#
+spirvcross_core_src = \
+  hxx{spirv_common spirv_cross_containers spirv_cross_error_handling spirv} \
+  h{GLSL.std.450...} \
+  {hxx cxx}{spirv_cross spirv_parser spirv_cross_parsed_ir spirv_cfg} \
+  h{NonSemanticShaderDebugInfo100}
+
+spirvcross_glsl_src    = {hxx cxx}{spirv_glsl}
+spirvcross_hlsl_src    = {hxx cxx}{spirv_hlsl}
+spirvcross_msl_src     = {hxx cxx}{spirv_msl}
+spirvcross_cpp_src     = {hxx cxx}{spirv_cpp} \
+  hxx{barrier image sampler thread_group internal_interface} \
+  h{external_interface}
+spirvcross_reflect_src = {hxx cxx}{spirv_reflect}
+spirvcross_util_src    = {hxx cxx}{spirv_cross_util}
+
+# spirv-cross-core is always built.
+#
+liba{spirv-cross-core}: libul{spirv-cross-core}: $spirvcross_core_src
+# Packaging stub for c.predefs. Adhoc so dist copies it (the generated
+# buildfile lives in out and is not distributed).
+#
+liba{spirv-cross-core}: h{spvc-c-api-version}: include = adhoc
+
+liba{spirv-cross-core}:
 {
-  cxx.export.poptions = "-I$out_root" "-I$src_root"
-  cxx.export.libs = $intf_libs
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs =
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+  export.metadata = 1 libspirv_cross
+  libspirv_cross.namespace = [string] $config.libspirv_cross.namespace
+  libspirv_cross.glsl      = [bool] $config.libspirv_cross.glsl
+  libspirv_cross.hlsl      = [bool] $config.libspirv_cross.hlsl
+  libspirv_cross.msl       = [bool] $config.libspirv_cross.msl
+  libspirv_cross.cpp       = [bool] $config.libspirv_cross.cpp
+  libspirv_cross.reflect   = [bool] $config.libspirv_cross.reflect
+  libspirv_cross.util      = [bool] $config.libspirv_cross.util
+  libspirv_cross.c_api     = [bool] $config.libspirv_cross.c_api
 }
 
-#liba{spirv-cross}: cxx.export.poptions += -DSPIRV_CROSS_STATIC
-#libs{spirv-cross}: cxx.export.poptions += -DSPIRV_CROSS_SHARED
+./: liba{spirv-cross-core}
 
-# For pre-releases use the complete version to make sure they cannot
-# be used in place of another pre-release or the final version. See
-# the version module for details on the version.* variable values.
+liba{spirv-cross-glsl}: libul{spirv-cross-glsl}: $spirvcross_glsl_src
+liba{spirv-cross-glsl}: liba{spirv-cross-core}
+liba{spirv-cross-glsl}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-core}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-glsl}: include = $config.libspirv_cross.glsl
+
+liba{spirv-cross-hlsl}: libul{spirv-cross-hlsl}: $spirvcross_hlsl_src
+liba{spirv-cross-hlsl}: liba{spirv-cross-glsl}
+liba{spirv-cross-hlsl}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-glsl}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-hlsl}: include = $config.libspirv_cross.hlsl
+
+liba{spirv-cross-msl}: libul{spirv-cross-msl}: $spirvcross_msl_src
+liba{spirv-cross-msl}: liba{spirv-cross-glsl}
+liba{spirv-cross-msl}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-glsl}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-msl}: include = $config.libspirv_cross.msl
+
+liba{spirv-cross-cpp}: libul{spirv-cross-cpp}: $spirvcross_cpp_src
+liba{spirv-cross-cpp}: liba{spirv-cross-glsl}
+liba{spirv-cross-cpp}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-glsl}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-cpp}: include = $config.libspirv_cross.cpp
+
+liba{spirv-cross-reflect}: libul{spirv-cross-reflect}: $spirvcross_reflect_src
+liba{spirv-cross-reflect}: liba{spirv-cross-glsl}
+liba{spirv-cross-reflect}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-glsl}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-reflect}: include = $config.libspirv_cross.reflect
+
+liba{spirv-cross-util}: libul{spirv-cross-util}: $spirvcross_util_src
+liba{spirv-cross-util}: liba{spirv-cross-core}
+liba{spirv-cross-util}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.export.libs = liba{spirv-cross-core}
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+}
+./: liba{spirv-cross-util}: include = $config.libspirv_cross.util
+
+# C API: always declared so dist is config-independent. Participation is
+# gated with include = (same as the C++ backends).
+#
+# Predefs input is a packaging stub, not spirv_cross_c.h (that header
+# includes stddef.h, which MSVC cannot see under c.predefs.poptions=false).
+#
+[rule_hint=c.predefs] buildfile{spvc-c-api-version}: h{spvc-c-api-version}
+{
+  c.predefs.poptions = false
+  c.predefs.macros = SPVC_C_API_VERSION_MAJOR SPVC_C_API_VERSION_MINOR \
+                     SPVC_C_API_VERSION_PATCH
+}
+
+buildfile{spvc-c-api-version}: install = false
+./: buildfile{spvc-c-api-version}
+
+SPVC_C_API_VERSION_MAJOR = [uint64] 0
+SPVC_C_API_VERSION_MINOR = [uint64] 68
+SPVC_C_API_VERSION_PATCH = [uint64] 0
+
+if ($build.meta_operation == 'perform')
+{
+  update buildfile{spvc-c-api-version}
+  source $path(buildfile{spvc-c-api-version})
+}
+
+# gitversion.h: upstream's cmake/gitversion.in.h template (symlinked as
+# gitversion.h.in), substituted with static values (no .git history in a
+# dist archive).
+#
+h{gitversion}: in{gitversion}
+h{gitversion}:
+{
+  in.symbol = '@'
+  in.substitutions = spirv-cross-build-version@"vulkan-sdk-$version" \
+                      spirv-cross-timestamp@""
+  install = false
+}
+
+spirvcross_c_libs = liba{spirv-cross-core}
+spirvcross_c_defines = -DHAVE_SPIRV_CROSS_GIT_VERSION
+
+if $config.libspirv_cross.glsl
+{
+  spirvcross_c_libs += liba{spirv-cross-glsl}
+  spirvcross_c_defines += -DSPIRV_CROSS_C_API_GLSL=1
+}
+
+if $config.libspirv_cross.hlsl
+{
+  spirvcross_c_libs += liba{spirv-cross-hlsl}
+  spirvcross_c_defines += -DSPIRV_CROSS_C_API_HLSL=1
+}
+
+if $config.libspirv_cross.msl
+{
+  spirvcross_c_libs += liba{spirv-cross-msl}
+  spirvcross_c_defines += -DSPIRV_CROSS_C_API_MSL=1
+}
+
+if $config.libspirv_cross.cpp
+{
+  spirvcross_c_libs += liba{spirv-cross-cpp}
+  spirvcross_c_defines += -DSPIRV_CROSS_C_API_CPP=1
+}
+
+if $config.libspirv_cross.reflect
+{
+  spirvcross_c_libs += liba{spirv-cross-reflect}
+  spirvcross_c_defines += -DSPIRV_CROSS_C_API_REFLECT=1
+}
+
+# Header is C, source is C++. Same stem, so list h{} and cxx{} separately.
+#
+lib{spirv-cross-c}: libul{spirv-cross-c}: \
+  h{spirv spirv_cross_c} cxx{spirv_cross_c} h{gitversion}
+lib{spirv-cross-c}: buildfile{spvc-c-api-version}: include = adhoc
+
+{obja objs}{spirv_cross_c}: cxx.poptions += $spirvcross_c_defines
+objs{spirv_cross_c}: cxx.poptions += -DSPVC_EXPORT_SYMBOLS
+
+# Static C API links the backend archives. Shared C API links libus{}
+# (PIC), matching CMake compiling those sources into the SHARED target.
+#
+liba{spirv-cross-c}: liba{spirv-cross-core}
+liba{spirv-cross-c}: liba{spirv-cross-glsl}:    include = $config.libspirv_cross.glsl
+liba{spirv-cross-c}: liba{spirv-cross-hlsl}:    include = $config.libspirv_cross.hlsl
+liba{spirv-cross-c}: liba{spirv-cross-msl}:     include = $config.libspirv_cross.msl
+liba{spirv-cross-c}: liba{spirv-cross-cpp}:     include = $config.libspirv_cross.cpp
+liba{spirv-cross-c}: liba{spirv-cross-reflect}: include = $config.libspirv_cross.reflect
+
+libs{spirv-cross-c}: libul{spirv-cross-core}
+libs{spirv-cross-c}: libul{spirv-cross-glsl}:    include = $config.libspirv_cross.glsl
+libs{spirv-cross-c}: libul{spirv-cross-hlsl}:    include = $config.libspirv_cross.hlsl
+libs{spirv-cross-c}: libul{spirv-cross-msl}:     include = $config.libspirv_cross.msl
+libs{spirv-cross-c}: libul{spirv-cross-cpp}:     include = $config.libspirv_cross.cpp
+libs{spirv-cross-c}: libul{spirv-cross-reflect}: include = $config.libspirv_cross.reflect
+
+lib{spirv-cross-c}:
+{
+  cxx.export.poptions = $spirvcross_export_poptions $spirvcross_ns_poptions
+  cxx.pkgconfig.include = include/ include/spirv_cross/
+  export.metadata = 1 libspirv_cross_c
+  libspirv_cross_c.abi_version_major = [uint64] $SPVC_C_API_VERSION_MAJOR
+  libspirv_cross_c.abi_version_minor = [uint64] $SPVC_C_API_VERSION_MINOR
+  libspirv_cross_c.abi_version_patch = [uint64] $SPVC_C_API_VERSION_PATCH
+  libspirv_cross_c.glsl    = [bool] $config.libspirv_cross.glsl
+  libspirv_cross_c.hlsl    = [bool] $config.libspirv_cross.hlsl
+  libspirv_cross_c.msl     = [bool] $config.libspirv_cross.msl
+  libspirv_cross_c.cpp     = [bool] $config.libspirv_cross.cpp
+  libspirv_cross_c.reflect = [bool] $config.libspirv_cross.reflect
+}
+
+# Pre-release keeps the snapshot suffix so it cannot replace a final ABI
+# layout. A final release versions the shared member with the C API ABI
+# (SOVERSION major, not the Vulkan SDK package version).
 #
 if $version.pre_release
-  lib{spirv-cross}: bin.lib.version = "-$version.project_id"
+  lib{spirv-cross-c}: bin.lib.version = "-$version.project_id"
+elif $macos
+  lib{spirv-cross-c}: bin.lib.version = ".$SPVC_C_API_VERSION_MAJOR"
+elif $bsd
+  libs{spirv-cross-c}: extension = "so.$SPVC_C_API_VERSION_MAJOR"
 else
-  lib{spirv-cross}: bin.lib.version = "-$version.major.$version.minor"
+  lib{spirv-cross-c}: bin.lib.version = "-$SPVC_C_API_VERSION_MAJOR" \
+    linux@$SPVC_C_API_VERSION_MAJOR.$SPVC_C_API_VERSION_MINOR.$SPVC_C_API_VERSION_PATCH
+
+# Static C API consumers still need the backend archives. The shared C API
+# links those objects in via libus{}.
+#
+liba{spirv-cross-c}: cxx.export.libs = $spirvcross_c_libs
+libs{spirv-cross-c}: cxx.export.libs =
+
+./: lib{spirv-cross-c}: include = $config.libspirv_cross.c_api
 
 # Install into the spirv_cross/ subdirectory of, say, /usr/include/
 # recreating subdirectories.
 #
-{hxx ixx txx}{*}:
+{hxx ixx txx h}{*}:
 {
   install         = include/spirv_cross/
   install.subdirs = true
 }
+
+# Private generated and internal-only headers. Must come after the wildcard.
+#
+h{gitversion}: install = false
+h{spvc-c-api-version}@./: install = false
+h{NonSemanticShaderDebugInfo100}@./: install = false
+in{*}: install = false
