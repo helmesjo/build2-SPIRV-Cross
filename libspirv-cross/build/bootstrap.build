@@ -1,0 +1,7 @@
+project = libspirv-cross
+
+using version
+using config
+using test
+using install
+using dist

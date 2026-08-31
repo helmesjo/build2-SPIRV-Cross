@@ -1,0 +1,3 @@
+import libs = libspirv-cross%lib{spirv-cross}
+
+exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}

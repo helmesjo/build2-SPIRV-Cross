@@ -1,0 +1,6 @@
+$out_root/
+{
+  include spirv_cross/
+}
+
+export $out_root/spirv_cross/$import.target
