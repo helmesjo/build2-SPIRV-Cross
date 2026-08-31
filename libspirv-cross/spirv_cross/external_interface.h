@@ -1,0 +1,1 @@
+../../upstream/include/spirv_cross/external_interface.h

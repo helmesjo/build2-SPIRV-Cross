@@ -1,0 +1,1 @@
+../../upstream/include/spirv_cross/internal_interface.hpp
