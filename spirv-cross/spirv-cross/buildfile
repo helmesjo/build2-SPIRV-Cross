@@ -1,6 +1,33 @@
-libs =
-#import libs += libhello%lib{hello}
+import libs = libspirv-cross%liba{spirv-cross-glsl} \
+              libspirv-cross%liba{spirv-cross-hlsl} \
+              libspirv-cross%liba{spirv-cross-msl} \
+              libspirv-cross%liba{spirv-cross-cpp} \
+              libspirv-cross%liba{spirv-cross-reflect} \
+              libspirv-cross%liba{spirv-cross-util}
 
-exe{spirv-cross}: {hxx ixx txx cxx}{**} $libs testscript
+# gitversion.h: same upstream template as the library C API.
+#
+h{gitversion}: in{gitversion}
+h{gitversion}:
+{
+  in.symbol = '@'
+  in.substitutions = spirv-cross-build-version@"vulkan-sdk-$version" \
+                      spirv-cross-timestamp@""
+  install = false
+}
 
-cxx.poptions =+ "-I$out_root" "-I$src_root"
+exe{spirv-cross}: cxx{main-build2} h{gitversion} $libs testscript
+exe{spirv-cross}: cxx{main}: include = adhoc
+./: exe{spirv-cross}
+
+cxx.poptions =+ "-I$out_base" "-I$src_base" -DHAVE_SPIRV_CROSS_GIT_VERSION \
+                "-DSPIRVCROSS_PKG_VERSION=\"$version\""
+
+# Metadata (see also --build2-metadata in main-build2.cpp).
+#
+exe{spirv-cross}:
+{
+  export.metadata = 1 spirv_cross
+  spirv_cross.name = [string] spirv-cross
+  spirv_cross.version = [string] "$version"
+}

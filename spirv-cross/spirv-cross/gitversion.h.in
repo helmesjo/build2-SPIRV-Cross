@@ -1,0 +1,1 @@
+../../upstream/cmake/gitversion.in.h
