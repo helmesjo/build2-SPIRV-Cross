@@ -4,13 +4,53 @@
 
 cxx.std = latest
 
+using c
+using c.predefs
 using cxx
+using in
 
 hxx{*}: extension = hpp
 ixx{*}: extension = ipp
 txx{*}: extension = tpp
 cxx{*}: extension = cpp
+h{*}:   extension = h
+c{*}:   extension = c
 
 # The test target for cross-testing (running tests under Wine, etc).
 #
 test.target = $cxx.target
+
+# Disable specific warnings that match upstream. Do not enable warning classes.
+# Upstream still uses implicit [=] this-capture.
+#
+if ($cxx.class != 'msvc')
+{
+  cxx.coptions =+ -Wno-deprecated-declarations -Wno-deprecated
+  if ($cxx.id == 'clang' || $cxx.id == 'clang-apple')
+    cxx.coptions =+ -Wno-deprecated-this-capture
+}
+else
+  cxx.coptions =+ /wd4267 /wd4996
+
+# Mirrors upstream's SPIRV_CROSS_ENABLE_* CMake options (same defaults: all on).
+#
+config [bool] config.libspirv_cross.glsl    ?= true
+config [bool] config.libspirv_cross.hlsl    ?= true
+config [bool] config.libspirv_cross.msl     ?= true
+config [bool] config.libspirv_cross.cpp     ?= true
+config [bool] config.libspirv_cross.reflect ?= true
+config [bool] config.libspirv_cross.util    ?= true
+config [bool] config.libspirv_cross.c_api   ?= true
+
+# Mirrors SPIRV_CROSS_NAMESPACE_OVERRIDE.
+#
+config [string] config.libspirv_cross.namespace ?= ''
+
+assert (!$config.libspirv_cross.hlsl    || $config.libspirv_cross.glsl) \
+  'HLSL target support requires GLSL support'
+assert (!$config.libspirv_cross.msl     || $config.libspirv_cross.glsl) \
+  'MSL target support requires GLSL support'
+assert (!$config.libspirv_cross.cpp     || $config.libspirv_cross.glsl) \
+  'C++ target support requires GLSL support'
+assert (!$config.libspirv_cross.reflect || $config.libspirv_cross.glsl) \
+  'JSON reflection support requires GLSL support'
