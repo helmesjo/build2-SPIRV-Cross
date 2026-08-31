@@ -38,26 +38,36 @@ if $have_c_api
   have_reflect = $($c_libs: libspirv_cross_c.reflect)
 }
 
-exe{spirv-cross-msl-constexpr-test}: cxx{msl_constexpr_test} $c_libs
-exe{spirv-cross-msl-constexpr-test}: file{msl_constexpr_test.spv}: test.input = true
+# Upstream tests-other dump compiled shader text on success. Those
+# executables share testscript, which discards that below verbosity 2.
+# test.input is simple-test only, so the .spv fixtures are adhoc
+# prerequisites and their paths go in test.arguments.
+#
+exe{spirv-cross-msl-constexpr-test}: cxx{msl_constexpr_test} $c_libs testscript
+exe{spirv-cross-msl-constexpr-test}: file{msl_constexpr_test.spv}: include = adhoc
+exe{spirv-cross-msl-constexpr-test}: test.arguments += "$src_base/msl_constexpr_test.spv"
 ./: exe{spirv-cross-msl-constexpr-test}: include = ($have_c_api && $have_msl)
 
-exe{spirv-cross-msl-resource-binding-test}: cxx{msl_resource_bindings} $c_libs
-exe{spirv-cross-msl-resource-binding-test}: file{msl_resource_binding.spv}: test.input = true
+exe{spirv-cross-msl-resource-binding-test}: cxx{msl_resource_bindings} $c_libs testscript
+exe{spirv-cross-msl-resource-binding-test}: file{msl_resource_binding.spv}: include = adhoc
+exe{spirv-cross-msl-resource-binding-test}: test.arguments += "$src_base/msl_resource_binding.spv"
 ./: exe{spirv-cross-msl-resource-binding-test}: include = ($have_c_api && $have_msl)
 
-exe{spirv-cross-hlsl-resource-binding-test}: cxx{hlsl_resource_bindings} $c_libs
-exe{spirv-cross-hlsl-resource-binding-test}: file{hlsl_resource_binding.spv}: test.input = true
+exe{spirv-cross-hlsl-resource-binding-test}: cxx{hlsl_resource_bindings} $c_libs testscript
+exe{spirv-cross-hlsl-resource-binding-test}: file{hlsl_resource_binding.spv}: include = adhoc
+exe{spirv-cross-hlsl-resource-binding-test}: test.arguments += "$src_base/hlsl_resource_binding.spv"
 ./: exe{spirv-cross-hlsl-resource-binding-test}: include = ($have_c_api && $have_hlsl)
 
 # Upstream registers this executable as two CTest cases, one per input .spv.
 #
-exe{spirv-cross-msl-ycbcr-conversion-test}: cxx{msl_ycbcr_conversion_test} $c_libs
-exe{spirv-cross-msl-ycbcr-conversion-test}: file{msl_ycbcr_conversion_test.spv}: test.input = true
+exe{spirv-cross-msl-ycbcr-conversion-test}: cxx{msl_ycbcr_conversion_test} $c_libs testscript
+exe{spirv-cross-msl-ycbcr-conversion-test}: file{msl_ycbcr_conversion_test.spv}: include = adhoc
+exe{spirv-cross-msl-ycbcr-conversion-test}: test.arguments += "$src_base/msl_ycbcr_conversion_test.spv"
 ./: exe{spirv-cross-msl-ycbcr-conversion-test}: include = ($have_c_api && $have_msl)
 
-exe{spirv-cross-msl-ycbcr-conversion-test-2}: cxx{msl_ycbcr_conversion_test} $c_libs
-exe{spirv-cross-msl-ycbcr-conversion-test-2}: file{msl_ycbcr_conversion_test_2.spv}: test.input = true
+exe{spirv-cross-msl-ycbcr-conversion-test-2}: cxx{msl_ycbcr_conversion_test} $c_libs testscript
+exe{spirv-cross-msl-ycbcr-conversion-test-2}: file{msl_ycbcr_conversion_test_2.spv}: include = adhoc
+exe{spirv-cross-msl-ycbcr-conversion-test-2}: test.arguments += "$src_base/msl_ycbcr_conversion_test_2.spv"
 ./: exe{spirv-cross-msl-ycbcr-conversion-test-2}: include = ($have_c_api && $have_msl)
 
 abi_maj =
@@ -70,7 +80,7 @@ if $have_c_api
   abi_pat = $($c_libs: libspirv_cross_c.abi_version_patch)
 }
 
-[rule_hint=cxx.link] exe{spirv-cross-c-api-test}: c{c_api_test} $c_libs
+[rule_hint=cxx.link] exe{spirv-cross-c-api-test}: c{c_api_test} $c_libs testscript
 exe{spirv-cross-c-api-test}: file{c_api_test.spv}: include = adhoc
 exe{spirv-cross-c-api-test}: test.arguments += "$src_base/c_api_test.spv" $abi_maj $abi_min $abi_pat
 ./: exe{spirv-cross-c-api-test}: include = ($have_c_api && $have_glsl && $have_hlsl && \
