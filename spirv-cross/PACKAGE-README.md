@@ -1,7 +1,8 @@
-# spirv-cross - An executable
+# spirv-cross - SPIR-V to GLSL/HLSL/MSL/C++ command line cross-compiler
 
-This is a `build2` package for the [`<UPSTREAM-NAME>`](https://<UPSTREAM-URL>)
-executable. It is a <SUMMARY-OF-FUNCTIONALITY>.
+This is a `build2` package for the [`SPIRV-Cross`](https://github.com/KhronosGroup/SPIRV-Cross)
+executable. It is a command line tool that parses SPIR-V binaries and
+cross-compiles them to GLSL, HLSL, MSL, or C++, and can emit JSON reflection.
 
 Note that the `spirv-cross` executable in this package provides `build2` metadata.
 
@@ -13,13 +14,13 @@ To start using `spirv-cross` in your project, add the following build-time
 appropriate:
 
 ```
-depends: * spirv-cross ^<VERSION>
+depends: * spirv-cross ^1.4.357
 ```
 
 Then import the executable in your `buildfile`:
 
 ```
-import! [metadata] <TARGET> = spirv-cross%exe{<TARGET>}
+import! [metadata] spirv_cross = spirv-cross%exe{spirv-cross}
 ```
 
 
@@ -28,18 +29,13 @@ import! [metadata] <TARGET> = spirv-cross%exe{<TARGET>}
 This package provides the following importable targets:
 
 ```
-exe{<TARGET>}
+exe{spirv-cross}
 ```
 
-<DESCRIPTION-OF-IMPORTABLE-TARGETS>
+The command line client. It requires every `libspirv-cross` backend plus util
+(same constraint as upstream CMake).
 
 
 ## Configuration variables
 
-This package provides the following configuration variables:
-
-```
-[bool] config.spirv_cross.<VARIABLE> ?= false
-```
-
-<DESCRIPTION-OF-CONFIG-VARIABLES>
+This package provides no configuration variables.
