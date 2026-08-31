@@ -1,11 +1,14 @@
 cxx.std = latest
 
+using c
 using cxx
 
 hxx{*}: extension = hpp
 ixx{*}: extension = ipp
 txx{*}: extension = tpp
 cxx{*}: extension = cpp
+h{*}:   extension = h
+c{*}:   extension = c
 
 # Every exe{} in this subproject is by default a test.
 #

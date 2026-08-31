@@ -1,0 +1,77 @@
+import! [metadata, rule_hint=cxx.link] core_libs = libspirv-cross%liba{spirv-cross-core}
+import? [metadata, rule_hint=cxx.link] c_libs = libspirv-cross%lib{spirv-cross-c}
+
+# small_vector.cpp, debug-lines.cpp, debug-info.cpp reference the bare
+# spirv_cross:: namespace directly (unpatched upstream files), so they only
+# build under the default (unoverridden) namespace. typed_id_test.cpp
+# already uses SPIRV_CROSS_NAMESPACE, so it stays unconditional.
+#
+namespace_default = ($($core_libs: libspirv_cross.namespace) == '')
+
+exe{spirv-cross-small-vector-test}: cxx{small_vector} $core_libs
+./: exe{spirv-cross-small-vector-test}: include = $namespace_default
+
+exe{spirv-cross-typed-id-test}: cxx{typed_id_test} $core_libs
+./: exe{spirv-cross-typed-id-test}
+
+exe{spirv-cross-debug-lines-test}: cxx{debug-lines} $core_libs
+exe{spirv-cross-debug-lines-test}: file{debug-lines.spv}: test.input = true
+./: exe{spirv-cross-debug-lines-test}: include = $namespace_default
+
+exe{spirv-cross-debug-info-test}: cxx{debug-info} $core_libs
+exe{spirv-cross-debug-info-test}: file{debug-info.spv}: test.input = true
+./: exe{spirv-cross-debug-info-test}: include = $namespace_default
+
+have_c_api = ($c_libs != [null])
+have_msl = false
+have_hlsl = false
+have_glsl = false
+have_cpp = false
+have_reflect = false
+
+if $have_c_api
+{
+  have_msl     = $($c_libs: libspirv_cross_c.msl)
+  have_hlsl    = $($c_libs: libspirv_cross_c.hlsl)
+  have_glsl    = $($c_libs: libspirv_cross_c.glsl)
+  have_cpp     = $($c_libs: libspirv_cross_c.cpp)
+  have_reflect = $($c_libs: libspirv_cross_c.reflect)
+}
+
+exe{spirv-cross-msl-constexpr-test}: cxx{msl_constexpr_test} $c_libs
+exe{spirv-cross-msl-constexpr-test}: file{msl_constexpr_test.spv}: test.input = true
+./: exe{spirv-cross-msl-constexpr-test}: include = ($have_c_api && $have_msl)
+
+exe{spirv-cross-msl-resource-binding-test}: cxx{msl_resource_bindings} $c_libs
+exe{spirv-cross-msl-resource-binding-test}: file{msl_resource_binding.spv}: test.input = true
+./: exe{spirv-cross-msl-resource-binding-test}: include = ($have_c_api && $have_msl)
+
+exe{spirv-cross-hlsl-resource-binding-test}: cxx{hlsl_resource_bindings} $c_libs
+exe{spirv-cross-hlsl-resource-binding-test}: file{hlsl_resource_binding.spv}: test.input = true
+./: exe{spirv-cross-hlsl-resource-binding-test}: include = ($have_c_api && $have_hlsl)
+
+# Upstream registers this executable as two CTest cases, one per input .spv.
+#
+exe{spirv-cross-msl-ycbcr-conversion-test}: cxx{msl_ycbcr_conversion_test} $c_libs
+exe{spirv-cross-msl-ycbcr-conversion-test}: file{msl_ycbcr_conversion_test.spv}: test.input = true
+./: exe{spirv-cross-msl-ycbcr-conversion-test}: include = ($have_c_api && $have_msl)
+
+exe{spirv-cross-msl-ycbcr-conversion-test-2}: cxx{msl_ycbcr_conversion_test} $c_libs
+exe{spirv-cross-msl-ycbcr-conversion-test-2}: file{msl_ycbcr_conversion_test_2.spv}: test.input = true
+./: exe{spirv-cross-msl-ycbcr-conversion-test-2}: include = ($have_c_api && $have_msl)
+
+abi_maj =
+abi_min =
+abi_pat =
+if $have_c_api
+{
+  abi_maj = $($c_libs: libspirv_cross_c.abi_version_major)
+  abi_min = $($c_libs: libspirv_cross_c.abi_version_minor)
+  abi_pat = $($c_libs: libspirv_cross_c.abi_version_patch)
+}
+
+[rule_hint=cxx.link] exe{spirv-cross-c-api-test}: c{c_api_test} $c_libs
+exe{spirv-cross-c-api-test}: file{c_api_test.spv}: include = adhoc
+exe{spirv-cross-c-api-test}: test.arguments += "$src_base/c_api_test.spv" $abi_maj $abi_min $abi_pat
+./: exe{spirv-cross-c-api-test}: include = ($have_c_api && $have_glsl && $have_hlsl && \
+                                            $have_msl && $have_cpp && $have_reflect)
