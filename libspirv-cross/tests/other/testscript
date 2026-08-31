@@ -1,0 +1,8 @@
+: run
+:
+# Upstream tests-other print compiled shader text on success (stdout for
+# the C API smoke test, stderr for the MSL/HLSL resource-binding
+# testbenches). Discard that below verbosity 2. Failures still fail on
+# exit status.
+#
+$* >! 2>!
