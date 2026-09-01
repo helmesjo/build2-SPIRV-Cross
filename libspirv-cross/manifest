@@ -6,7 +6,7 @@ language: c++
 project: spirv-cross
 summary: SPIR-V to GLSL/HLSL/MSL/C++ cross-compiler and reflection library
 topics: graphics, Vulkan, SPIR-V, shader, cross-compiler
-license: Apache-2.0 AND MIT ; Apache-2.0 OR MIT for most files. MIT-only for spirv.h, spirv.hpp, and GLSL.std.450.h. Apache-2.0-only for include/spirv_cross/ runtime headers. NonSemanticShaderDebugInfo100.h is Khronos free-use and is not installed.
+license: Apache-2.0 AND MIT, other: Khronos ; NonSemanticShaderDebugInfo100.h.
 description-file: README.md
 package-description-file: PACKAGE-README.md
 url: https://github.com/KhronosGroup/SPIRV-Cross
