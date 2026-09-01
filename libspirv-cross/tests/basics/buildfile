@@ -1,8 +1,13 @@
 import! [metadata, rule_hint=cxx.link] core_libs = libspirv-cross%liba{spirv-cross-core}
-import? [rule_hint=cxx.link] glsl_libs = libspirv-cross%liba{spirv-cross-glsl}
 
 have_glsl = $($core_libs: libspirv_cross.glsl)
 
-exe{driver}: {hxx ixx txx cxx}{**} $glsl_libs testscript{**}
+# Deferred import, no rule_hint. Immediate import? with cxx.link would search
+# installed/system libraries and can hang CI via sys: (build2#555).
+#
+import glsl_libs = libspirv-cross%liba{spirv-cross-glsl}
+
+exe{driver}: {hxx ixx txx cxx}{**} testscript{**}
+exe{driver}: $glsl_libs: include = $have_glsl
 exe{driver}: file{c_api_test.spv}: test.input = true
 ./: exe{driver}: include = $have_glsl
