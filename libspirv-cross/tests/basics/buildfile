@@ -7,7 +7,7 @@ exe{driver}: file{c_api_test.spv}: test.input = true
 
 if $have_glsl
 {
-  import! [metadata, rule_hint=cxx.link] glsl_libs = libspirv-cross%liba{spirv-cross-glsl}
+  import glsl_libs = libspirv-cross%liba{spirv-cross-glsl}
   exe{driver}: $glsl_libs
 }
 
