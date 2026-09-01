@@ -1,5 +1,14 @@
-import libs = libspirv-cross%liba{spirv-cross-glsl}
+import! [metadata, rule_hint=cxx.link] core_libs = libspirv-cross%liba{spirv-cross-core}
 
-exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}
+have_glsl = $($core_libs: libspirv_cross.glsl)
 
+exe{driver}: {hxx ixx txx cxx}{**} testscript{**}
 exe{driver}: file{c_api_test.spv}: test.input = true
+
+if $have_glsl
+{
+  import! [metadata, rule_hint=cxx.link] glsl_libs = libspirv-cross%liba{spirv-cross-glsl}
+  exe{driver}: $glsl_libs
+}
+
+./: exe{driver}: include = $have_glsl
