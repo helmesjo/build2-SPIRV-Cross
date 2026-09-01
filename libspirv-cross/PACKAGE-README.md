@@ -56,8 +56,9 @@ they cannot overwrite a final ABI-named library.
 Public headers install to `include/spirv_cross/`, reachable both as
 `<spirv_cross/spirv_msl.hpp>` (qualified) and as `<spirv_msl.hpp>`
 (unqualified, matching upstream pkg-config). C++ backend runtime headers
-(`external_interface.h`, `image.hpp`, and related) are installed as well.
-`image.hpp` includes `<glm/glm.hpp>` if you compile generated C++ shaders.
+(`external_interface.h`, `image.hpp`, and related) are not installed,
+matching upstream CMake. Generated C++ shaders that include them need those
+headers from the source tree, and `image.hpp` includes `<glm/glm.hpp>`.
 
 
 ## Configuration variables
