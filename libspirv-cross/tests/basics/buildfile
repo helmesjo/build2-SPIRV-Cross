@@ -1,3 +1,5 @@
-import libs = libspirv-cross%lib{spirv-cross}
+import libs = libspirv-cross%liba{spirv-cross-glsl}
 
 exe{driver}: {hxx ixx txx cxx}{**} $libs testscript{**}
+
+exe{driver}: file{c_api_test.spv}: test.input = true
