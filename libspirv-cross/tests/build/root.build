@@ -10,6 +10,26 @@ cxx{*}: extension = cpp
 h{*}:   extension = h
 c{*}:   extension = c
 
+# Disable specific warnings from unpatched upstream tests. Do not enable
+# warning classes.
+#
+if ($cxx.class != 'msvc')
+  cxx.coptions =+ -Wno-unused-but-set-variable
+else
+{
+  # C4267: size_t to int in c_api_test.c. C4996: fopen in .cpp tests.
+  # _CRT_SECURE_NO_WARNINGS is MSVC CRT only (cl, clang-cl), not MinGW/GCC.
+  #
+  cxx.coptions =+ /wd4267 /wd4996
+  c.coptions =+ /wd4267
+  cc.poptions =+ -D_CRT_SECURE_NO_WARNINGS
+}
+
+# clang-cl uses Clang diagnostics with the MSVC CRT.
+#
+if ($cxx.id == 'msvc-clang')
+  cxx.coptions =+ -Wno-unused-but-set-variable -Wno-deprecated-declarations
+
 # Every exe{} in this subproject is by default a test.
 #
 exe{*}: test = true
